@@ -1,0 +1,110 @@
+# Laravel 12 Inventory Management System - Core Patterns
+
+## Project Structure
+This is a Laravel 12 SPA using Inertia.js with React and TypeScript. The main entry point is [app.tsx](mdc:resources/js/app.tsx) which loads the Inertia app.
+
+### Key Directories
+- **Controllers**: [app/Http/Controllers/](mdc:app/Http/Controllers/) - Handle HTTP requests and return Inertia responses
+- **Models**: [app/Models/](mdc:app/Models/) - Eloquent ORM with proper relationships
+- **Pages**: [resources/js/pages/](mdc:resources/js/pages/) - React components for each route
+- **Components**: [resources/js/components/](mdc:resources/js/components/) - Shared React components
+- **Routes**: [routes/web.php](mdc:routes/web.php) - SPA routes for Inertia navigation
+
+## Laravel 12 Modern Features
+
+### Service Providers
+- Only use [AppServiceProvider.php](mdc:app/Providers/AppServiceProvider.php)
+- Register new providers in [bootstrap/providers.php](mdc:bootstrap/providers.php)
+- No manual provider registration needed
+
+### Middleware Registration
+- Register in [bootstrap/app.php](mdc:bootstrap/app.php)
+- Use [HandleInertiaRequests.php](mdc:app/Http/Middleware/HandleInertiaRequests.php) for Inertia
+
+### Console Commands
+- Use [routes/console.php](mdc:routes/console.php) for scheduled commands
+- No Kernel.php needed in Laravel 12
+
+## Database Patterns
+
+### Migration Strategy
+- Sequential migrations in [database/migrations/](mdc:database/migrations/)
+- Proper foreign key relationships with cascading rules
+- Unique constraints for business-critical fields
+
+### Model Relationships
+```php
+// Example from [app/Models/Client.php](mdc:app/Models/Client.php)
+public function commercial(): BelongsTo
+{
+    return $this->belongsTo(Commercial::class);
+}
+
+public function ville(): BelongsTo
+{
+    return $this->belongsTo(Ville::class);
+}
+```
+
+### Factory Pattern
+- Use `fake()` helper instead of `$this->faker`
+- Factories in [database/factories/](mdc:database/factories/)
+- Seeders in [database/seeders/](mdc:database/seeders/)
+
+## Authentication & Security
+
+### SPA Authentication
+- Laravel Breeze with Inertia + React
+- Sanctum for CSRF protection
+- Session-based authentication for web routes
+
+### Permission System
+- spatie/laravel-permission for role-based access
+- Permission checks in controllers using policies
+- Frontend permission visibility using `usePermissions()` hook
+
+### Route Protection
+- SPA routes: `auth` middleware
+- API routes: `auth:sanctum` middleware
+- CSRF protection enabled via Sanctum
+
+## Controller Patterns
+
+### Inertia Response Pattern
+```php
+// Example from [app/Http/Controllers/ClientController.php](mdc:app/Http/Controllers/ClientController.php)
+return Inertia::render('client/index', [
+    'clients' => $clients,
+    'filters' => $request->only(['search', 'sort']),
+]);
+```
+
+### Form Request Validation
+- Use FormRequest classes in [app/Http/Requests/](mdc:app/Http/Requests/)
+- Server-side validation with detailed messages
+- Consistent error handling across all forms
+
+### Authorization Pattern
+```php
+public function store(ClientRequest $request)
+{
+    $this->authorize('create', Client::class);
+    // ... create logic
+}
+```
+
+## Error Handling
+
+### Exception Handling
+- Use specific exception types
+- Implement proper logging with context
+- Create custom exceptions when necessary
+- Use Laravel's built-in error handling tools
+
+### Validation Errors
+- FormRequest validation with detailed messages
+- Frontend error display through `InputError` components
+- Consistent error handling across all forms
+---
+alwaysApply: true
+---

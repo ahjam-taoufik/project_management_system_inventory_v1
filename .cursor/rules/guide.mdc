@@ -1,0 +1,207 @@
+# 🚀 Quick Reference Guide - Laravel 12 Development
+
+## 📋 Project Overview
+Modern **Laravel 12 Inventory Management System** with React + TypeScript + Inertia.js
+
+### Tech Stack
+- **Backend**: Laravel 12 (PHP 8.2+), MySQL, Eloquent ORM
+- **Frontend**: React 19 + TypeScript 5.7 + Inertia.js 2.0
+- **UI**: TailwindCSS 4.0 + shadcn/ui
+- **Authentication**: Laravel Breeze + Sanctum
+- **Permissions**: spatie/laravel-permission
+
+## 🛠️ Quick Commands Reference
+
+### Development Commands
+```bash
+# Start development (Laravel + Vite + Queue)
+composer dev
+
+# With SSR
+composer dev:ssr
+
+# Frontend only
+npm run dev
+
+# Build production
+npm run build
+
+# Build with SSR
+npm run build:ssr
+```
+
+### Laravel Commands
+```bash
+# Make controllers with resources
+php artisan make:controller ProductController --resource
+
+# Make models with migration, factory, seeder
+php artisan make:model Product -mfs
+
+# Make requests
+php artisan make:request ProductRequest
+
+# Run migrations
+php artisan migrate
+
+# Seed database
+php artisan db:seed
+
+# Clear caches
+php artisan optimize:clear
+```
+
+### Testing Commands
+```bash
+# Run all tests
+composer test
+
+# Run specific test
+php artisan test --filter ProductTest
+
+# Run with coverage
+php artisan test --coverage
+```
+
+### Code Quality Commands
+```bash
+# Format code
+npm run format
+
+# Check formatting
+npm run format:check
+
+# Lint code
+npm run lint
+
+# Type check
+npm run types
+```
+
+## 🔧 Environment Variables
+
+### Required Variables
+```env
+# Application
+APP_NAME="Laravel Inventory"
+APP_ENV=local
+APP_KEY=base64:...
+APP_DEBUG=true
+APP_URL=http://localhost
+
+# Database
+DB_CONNECTION=sqlite
+DB_DATABASE=database/database.sqlite
+
+# Cache & Session
+CACHE_STORE=database
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+
+# Queue
+QUEUE_CONNECTION=database
+
+# Mail (Development)
+MAIL_MAILER=log
+```
+
+### Optional Variables
+```env
+# Locale
+APP_LOCALE=fr
+APP_FALLBACK_LOCALE=en
+
+# Database (MySQL/PostgreSQL)
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=root
+DB_PASSWORD=
+
+# Redis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+```
+
+## 🎯 Common Issues & Solutions
+
+### 1. **Inertia Version Mismatch**
+**Problem**: Component not updating after data change
+**Solution**: Check Inertia version header, use `router.reload()`
+
+### 2. **Permission Cache Issues**
+**Problem**: Permission changes not reflected immediately
+**Solution**: Clear permission cache with `php artisan permission:cache-reset`
+
+### 3. **TypeScript Errors**
+**Problem**: Type errors in React components
+**Solution**: Run `npm run types` to check, ensure proper type definitions
+
+### 4. **Database Connection Issues**
+**Problem**: Migration or seeding fails
+**Solution**: Check `.env` configuration, ensure database exists
+
+## 🏗️ Architecture Quick Reference
+
+### Laravel 12 Specific
+- **Service Providers**: Minimal usage, mainly AppServiceProvider
+- **Middleware**: Registered in `bootstrap/app.php`
+- **Event Discovery**: Auto-discovery enabled
+- **Policy Discovery**: Auto-discovery enabled
+- **Console Commands**: Defined in `routes/console.php`
+
+### React/Inertia Patterns
+- **Page Components**: `resources/js/pages/`
+- **Shared Components**: `resources/js/components/`
+- **Layouts**: Nested layout system
+- **Type Safety**: Full TypeScript integration
+- **State Management**: Inertia props + Zustand for complex state
+
+### Permission Integration
+- **Backend**: Middleware + Policies
+- **Frontend**: Custom hooks + Guard components
+- **Data Sharing**: Inertia middleware shares permissions
+- **Caching**: 24-hour permission caching
+
+## 📝 Development Workflow
+
+### For New Features
+1. **Models First**: Define models with relationships
+2. **Migrations**: Create tables with proper constraints
+3. **Controllers**: Implement CRUD operations
+4. **Requests**: Add validation rules
+5. **Frontend**: Create React components with TypeScript
+6. **Permissions**: Add role-based access control
+7. **Testing**: Write feature tests
+
+### For Bug Fixes
+1. **Reproduce**: Create minimal test case
+2. **Debug**: Use Laravel Telescope, React DevTools
+3. **Fix**: Make minimal necessary changes
+4. **Test**: Verify fix works
+5. **Document**: Update relevant documentation
+
+## 🚨 Performance Tips
+
+### Backend
+- Use eager loading to prevent N+1 queries
+- Implement proper database indexing
+- Use caching for expensive operations
+- Optimize database queries
+
+### Frontend
+- Lazy load heavy components
+- Use React.memo for expensive computations
+- Implement proper loading states
+- Optimize bundle size with code splitting
+
+## 🔒 Security Checklist
+
+- [ ] Input validation on all forms
+- [ ] Authorization checks in controllers
+- [ ] CSRF protection enabled
+- [ ] SQL injection prevention
+- [ ] XSS protection
+- [ ] Proper error handling
+- [ ] Secure session configuration

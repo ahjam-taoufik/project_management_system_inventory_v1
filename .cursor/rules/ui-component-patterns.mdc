@@ -1,0 +1,507 @@
+# UI Component Patterns - shadcn/ui & TailwindCSS
+
+## Component Library Structure
+
+### shadcn/ui Components
+All UI components are located in [resources/js/components/ui/](mdc:resources/js/components/ui/) and follow consistent patterns:
+
+```typescript
+// Example from [resources/js/components/ui/button.tsx](mdc:resources/js/components/ui/button.tsx)
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, ...props }, ref) => {
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
+);
+```
+
+### Layout Components
+Layout components in [resources/js/layouts/](mdc:resources/js/layouts/):
+
+```typescript
+// Example from [resources/js/layouts/app-layout.tsx](mdc:resources/js/layouts/app-layout.tsx)
+function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <AppSidebar />
+      <div className="flex-1">
+        <AppHeader />
+        <main className="flex-1 p-6">{children}</main>
+      </div>
+    </div>
+  );
+}
+```
+
+## Table Component Patterns
+
+### AppTable Structure
+Each entity has a consistent AppTable component:
+
+```typescript
+// Example from [resources/js/pages/client/AppTable.tsx](mdc:resources/js/pages/client/AppTable.tsx)
+interface AppTableProps {
+  data: Client[];
+  links: PaginationLinks;
+}
+
+function AppTable({ data, links }: AppTableProps) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nom</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Téléphone</TableHead>
+              <TableHead>Commercial</TableHead>
+              <TableHead>Ville</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((client) => (
+              <ClientTableRow key={client.id} client={client} />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Pagination links={links} />
+    </div>
+  );
+}
+```
+
+### Table Row Components
+Consistent table row patterns:
+
+```typescript
+// Example from [resources/js/pages/client/components/ClientTableRow.tsx](mdc:resources/js/pages/client/components/ClientTableRow.tsx)
+interface ClientTableRowProps {
+  client: Client;
+}
+
+function ClientTableRow({ client }: ClientTableRowProps) {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  return (
+    <TableRow>
+      <TableCell>{client.fullname}</TableCell>
+      <TableCell>{client.email}</TableCell>
+      <TableCell>{client.phone}</TableCell>
+      <TableCell>{client.commercial?.nom}</TableCell>
+      <TableCell>{client.ville?.nom}</TableCell>
+      <TableCell>
+        <ClientDropDown
+          client={client}
+          onEdit={() => setIsEditDialogOpen(true)}
+        />
+        <ClientEditDialog
+          client={client}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+        />
+      </TableCell>
+    </TableRow>
+  );
+}
+```
+
+## Dialog Component Patterns
+
+### Create/Edit Dialog Structure
+Consistent dialog patterns for CRUD operations:
+
+```typescript
+// Example from [resources/js/pages/client/components/ClientDialog.tsx](mdc:resources/js/pages/client/components/ClientDialog.tsx)
+interface ClientDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  client?: Client;
+}
+
+function ClientDialog({ open, onOpenChange, client }: ClientDialogProps) {
+  const form = useForm({
+    fullname: client?.fullname ?? '',
+    email: client?.email ?? '',
+    phone: client?.phone ?? '',
+    commercial_id: client?.commercial_id ?? '',
+    ville_id: client?.ville_id ?? '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (client) {
+      form.put(route('clients.update', client.id));
+    } else {
+      form.post(route('clients.store'));
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>
+            {client ? 'Modifier le client' : 'Ajouter un client'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="fullname" className="text-right">
+                Nom complet
+              </Label>
+              <Input
+                id="fullname"
+                value={form.data.fullname}
+                onChange={(e) => form.setData('fullname', e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <InputError message={form.errors.fullname} />
+
+            {/* Additional form fields */}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={form.processing}>
+              {form.processing ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+## Form Component Patterns
+
+### Input Components
+Consistent input patterns with error handling:
+
+```typescript
+// Example from [resources/js/components/input-error.tsx](mdc:resources/js/components/input-error.tsx)
+function InputError({ message }: { message?: string }) {
+  return message ? (
+    <p className="text-sm text-red-600">{message}</p>
+  ) : null;
+}
+
+// Form field pattern
+<div className="grid grid-cols-4 items-center gap-4">
+  <Label htmlFor="field" className="text-right">
+    Label
+  </Label>
+  <Input
+    id="field"
+    value={form.data.field}
+    onChange={(e) => form.setData('field', e.target.value)}
+    className="col-span-3"
+  />
+</div>
+<InputError message={form.errors.field} />
+```
+
+### Select Components
+Consistent select patterns for relationships:
+
+```typescript
+// Example select pattern
+<div className="grid grid-cols-4 items-center gap-4">
+  <Label htmlFor="commercial_id" className="text-right">
+    Commercial
+  </Label>
+  <Select
+    value={form.data.commercial_id}
+    onValueChange={(value) => form.setData('commercial_id', value)}
+  >
+    <SelectTrigger className="col-span-3">
+      <SelectValue placeholder="Sélectionner un commercial" />
+    </SelectTrigger>
+    <SelectContent>
+      {commerciaux.map((commercial) => (
+        <SelectItem key={commercial.id} value={commercial.id.toString()}>
+          {commercial.nom}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+<InputError message={form.errors.commercial_id} />
+```
+
+## Navigation Component Patterns
+
+### Sidebar Navigation
+Consistent sidebar patterns:
+
+```typescript
+// Example from [resources/js/components/app-sidebar.tsx](mdc:resources/js/components/app-sidebar.tsx)
+function AppSidebar() {
+  return (
+    <aside className="flex w-64 flex-col border-r bg-background">
+      <AppSidebarHeader />
+      <nav className="flex-1 space-y-1 p-2">
+        <NavMain />
+      </nav>
+      <nav className="p-2">
+        <NavFooter />
+      </nav>
+    </aside>
+  );
+}
+```
+
+### Breadcrumb Navigation
+Consistent breadcrumb patterns:
+
+```typescript
+// Example from [resources/js/components/breadcrumbs.tsx](mdc:resources/js/components/breadcrumbs.tsx)
+function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
+  return (
+    <nav className="flex" aria-label="Breadcrumb">
+      <ol className="flex items-center space-x-2">
+        {items.map((item, index) => (
+          <li key={index} className="flex items-center">
+            {index > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            <TextLink href={item.href}>{item.label}</TextLink>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+```
+
+## Icon Usage Patterns
+
+### Lucide React Icons
+Consistent icon usage throughout the application:
+
+```typescript
+// Import patterns
+import { User, Plus, Edit, Trash2, Search, ChevronRight } from 'lucide-react';
+
+// Icon usage patterns
+<Button size="icon" variant="ghost">
+  <Edit className="h-4 w-4" />
+</Button>
+
+<Button>
+  <Plus className="mr-2 h-4 w-4" />
+  Ajouter
+</Button>
+```
+
+### Icon Sizing
+Consistent icon sizing:
+- **Small**: `h-4 w-4` (16px)
+- **Medium**: `h-5 w-5` (20px)
+- **Large**: `h-6 w-6` (24px)
+
+## Styling Guidelines
+
+### TailwindCSS Classes
+Consistent class ordering and usage:
+
+```typescript
+// Layout classes
+className="flex items-center justify-between space-x-4"
+
+// Spacing classes
+className="p-4 space-y-4"
+
+// Color classes
+className="text-primary bg-background border-border"
+
+// Responsive classes
+className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+```
+
+### Color System
+Use semantic color classes:
+
+```typescript
+// Background colors
+className="bg-background"      // Main background
+className="bg-muted"           // Secondary background
+className="bg-card"            // Card background
+
+// Text colors
+className="text-foreground"    // Primary text
+className="text-muted-foreground" // Secondary text
+className="text-primary"       // Accent text
+
+// Border colors
+className="border-border"      // Default border
+className="border-input"       // Input border
+```
+
+### Spacing System
+Consistent spacing using Tailwind's spacing scale:
+
+```typescript
+// Padding
+className="p-2"    // 8px
+className="p-4"    // 16px
+className="p-6"    // 24px
+
+// Margin
+className="m-2"    // 8px
+className="m-4"    // 16px
+className="m-6"    // 24px
+
+// Gap
+className="gap-2"  // 8px
+className="gap-4"  // 16px
+className="gap-6"  // 24px
+```
+
+## Responsive Design Patterns
+
+### Mobile-First Approach
+```typescript
+// Responsive grid
+className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+
+// Responsive text
+className="text-sm md:text-base lg:text-lg"
+
+// Responsive spacing
+className="p-4 md:p-6 lg:p-8"
+```
+
+### Breakpoint Usage
+- **sm**: 640px and up
+- **md**: 768px and up
+- **lg**: 1024px and up
+- **xl**: 1280px and up
+- **2xl**: 1536px and up
+
+## Accessibility Patterns
+
+### ARIA Labels
+```typescript
+// Button with aria-label
+<Button aria-label="Modifier le client">
+  <Edit className="h-4 w-4" />
+</Button>
+
+// Form with proper labels
+<Label htmlFor="email">Email</Label>
+<Input id="email" aria-describedby="email-error" />
+
+// Error message with proper association
+<p id="email-error" className="text-sm text-red-600">
+  {form.errors.email}
+</p>
+```
+
+### Keyboard Navigation
+```typescript
+// Focus management
+<Dialog open={open} onOpenChange={onOpenChange}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Title</DialogTitle>
+    </DialogHeader>
+    {/* Content */}
+  </DialogContent>
+</Dialog>
+```
+
+## Loading States
+
+### Button Loading States
+```typescript
+<Button disabled={form.processing}>
+  {form.processing ? (
+    <>
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      Enregistrement...
+    </>
+  ) : (
+    'Enregistrer'
+  )}
+</Button>
+```
+
+### Skeleton Loading
+```typescript
+// Table skeleton
+<div className="space-y-4">
+  <div className="rounded-md border">
+    <div className="p-4">
+      <Skeleton className="h-4 w-[250px]" />
+    </div>
+    <div className="p-4">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} className="h-4 w-full mb-2" />
+      ))}
+    </div>
+  </div>
+</div>
+```
+
+## Error States
+
+### Error Boundaries
+```typescript
+function ErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-red-600 mb-2">
+            Une erreur s'est produite
+          </h2>
+          <Button onClick={() => window.location.reload()}>
+            Recharger la page
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
+}
+```
+
+### Empty States
+```typescript
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-8 text-center">
+      <Inbox className="h-12 w-12 text-muted-foreground mb-4" />
+      <h3 className="text-lg font-semibold mb-2">Aucun résultat</h3>
+      <p className="text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+```
+---
+globs: *.tsx,*.ts
+description: UI component patterns, shadcn/ui usage, and styling guidelines
+---

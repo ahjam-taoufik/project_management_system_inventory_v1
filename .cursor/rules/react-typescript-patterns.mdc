@@ -1,0 +1,292 @@
+# React & TypeScript Patterns - Inertia.js SPA
+
+## Component Structure
+
+### Page Components
+Page components are located in [resources/js/pages/](mdc:resources/js/pages/) and follow this pattern:
+
+```typescript
+// Example from [resources/js/pages/client/index.tsx](mdc:resources/js/pages/client/index.tsx)
+interface ClientIndexProps {
+  clients: PaginatedData<Client>;
+  filters: Record<string, any>;
+}
+
+function ClientIndex({ clients, filters }: ClientIndexProps) {
+  const { data, links } = clients;
+
+  return (
+    <AppLayout>
+      <AppTable data={data} links={links} />
+    </AppLayout>
+  );
+}
+```
+
+### Shared Components
+Reusable components in [resources/js/components/](mdc:resources/js/components/) with consistent patterns:
+
+```typescript
+// Example from [resources/js/components/ui/button.tsx](mdc:resources/js/components/ui/button.tsx)
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, ...props }, ref) => {
+    // Component implementation
+  }
+);
+```
+
+## Inertia.js Integration
+
+### Form Management
+Always use `useForm()` from Inertia for form state:
+
+```typescript
+// Example from [resources/js/pages/client/components/ClientDialog.tsx](mdc:resources/js/pages/client/components/ClientDialog.tsx)
+import { useForm } from '@inertiajs/react';
+
+function ClientDialog() {
+  const form = useForm({
+    fullname: '',
+    email: '',
+    phone: '',
+    commercial_id: '',
+    ville_id: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    form.post(route('clients.store'));
+  };
+}
+```
+
+### Page Props Access
+Use `usePage()` to access backend data:
+
+```typescript
+import { usePage } from '@inertiajs/react';
+
+function Component() {
+  const { props } = usePage();
+  const { auth, permissions } = props;
+}
+```
+
+### Navigation
+Use Inertia for all navigation - no React Router:
+
+```typescript
+import { router } from '@inertiajs/react';
+
+// Navigate to new page
+router.visit(route('clients.index'));
+
+// Navigate with data
+router.visit(route('clients.index'), {
+  data: { search: 'query' }
+});
+```
+
+## TypeScript Standards
+
+### Type Definitions
+Types are organized in [resources/js/types/](mdc:resources/js/types/):
+
+```typescript
+// Example from [resources/js/types/index.d.ts](mdc:resources/js/types/index.d.ts)
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  permissions: string[];
+}
+
+interface PaginatedData<T> {
+  data: T[];
+  links: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+}
+```
+
+### Import Patterns
+```typescript
+// React imports
+import { useState, useEffect } from 'react';
+import { usePage, useForm } from '@inertiajs/react';
+
+// Component imports
+import { Button } from '@/components/ui/button';
+import { User } from 'lucide-react';
+
+// Type imports
+import type { User as UserType } from '@/types';
+```
+
+### Strict TypeScript Rules
+- No `any` or `unknown` types
+- No type assertions with `as` or `!`
+- Prefer interfaces over types
+- Avoid enums - use objects or maps
+
+## UI Component Patterns
+
+### shadcn/ui Integration
+All UI components use shadcn/ui from [resources/js/components/ui/](mdc:resources/js/components/ui/):
+
+```typescript
+// Example usage
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+```
+
+### Layout Components
+Layout components in [resources/js/layouts/](mdc:resources/js/layouts/):
+
+```typescript
+// Example from [resources/js/layouts/app-layout.tsx](mdc:resources/js/layouts/app-layout.tsx)
+function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <AppSidebar />
+      <div className="flex-1">
+        <AppHeader />
+        <main className="flex-1 p-6">{children}</main>
+      </div>
+    </div>
+  );
+}
+```
+
+### Table Patterns
+Table components follow consistent patterns:
+
+```typescript
+// Example from [resources/js/pages/client/AppTable.tsx](mdc:resources/js/pages/client/AppTable.tsx)
+interface AppTableProps {
+  data: Client[];
+  links: PaginationLinks;
+}
+
+function AppTable({ data, links }: AppTableProps) {
+  return (
+    <div className="space-y-4">
+      <ClientTable data={data} />
+      <Pagination links={links} />
+    </div>
+  );
+}
+```
+
+## State Management
+
+### Local State
+Use React hooks for local component state:
+
+```typescript
+function Component() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+}
+```
+
+### Form State
+Always use Inertia's `useForm()` for form state:
+
+```typescript
+const form = useForm({
+  name: '',
+  email: '',
+});
+
+// Access form data
+console.log(form.data.name);
+
+// Update form data
+form.setData('name', 'new value');
+
+// Submit form
+form.post(route('users.store'));
+```
+
+### Global State
+Use Zustand only when absolutely necessary for global state that can't be handled by Inertia props.
+
+## Error Handling
+
+### Form Errors
+Display validation errors using `InputError` component:
+
+```typescript
+// Example from [resources/js/components/input-error.tsx](mdc:resources/js/components/input-error.tsx)
+function InputError({ message }: { message?: string }) {
+  return message ? (
+    <p className="text-sm text-red-600">{message}</p>
+  ) : null;
+}
+```
+
+### Network Errors
+Handle network errors gracefully:
+
+```typescript
+function Component() {
+  const handleError = (error: any) => {
+    console.error('Network error:', error);
+    // Show user-friendly error message
+  };
+}
+```
+
+## Performance Patterns
+
+### Code Splitting
+- Lazy load heavy components
+- Use React.memo for expensive computations
+- Implement proper loading states
+
+### Re-render Optimization
+- Use proper dependency arrays in useEffect
+- Avoid unnecessary state updates
+- Use React.memo for pure components
+
+## Testing Patterns
+
+### Component Testing
+```typescript
+import { render, screen } from '@testing-library/react';
+import { createInertiaApp } from '@inertiajs/react';
+
+function renderComponent(Component: React.ComponentType, props = {}) {
+  return render(
+    <Component {...props} />
+  );
+}
+```
+
+### Form Testing
+```typescript
+import userEvent from '@testing-library/user-event';
+
+test('submits form correctly', async () => {
+  const user = userEvent.setup();
+  render(<MyForm />);
+
+  await user.type(screen.getByLabelText('Name'), 'John');
+  await user.click(screen.getByRole('button', { name: 'Submit' }));
+});
+```
+---
+globs: *.tsx,*.ts
+description: React and TypeScript patterns for Inertia.js SPA with shadcn/ui components
+---

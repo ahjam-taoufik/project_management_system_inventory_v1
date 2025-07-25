@@ -1,0 +1,437 @@
+# Entity Management Patterns - Inventory System
+
+## Entity Structure
+
+### Core Entities
+The system manages these main entities with consistent patterns:
+
+1. **Products** - [app/Models/Product.php](mdc:app/Models/Product.php)
+2. **Clients** - [app/Models/Client.php](mdc:app/Models/Client.php)
+3. **Commercials** - [app/Models/Commercial.php](mdc:app/Models/Commercial.php)
+4. **Brands** - [app/Models/Brand.php](mdc:app/Models/Brand.php)
+5. **Categories** - [app/Models/Category.php](mdc:app/Models/Category.php)
+6. **Villes** - [app/Models/Ville.php](mdc:app/Models/Ville.php)
+7. **Secteurs** - [app/Models/Secteur.php](mdc:app/Models/Secteur.php)
+
+## Controller Patterns
+
+### Resource Controller Structure
+Each entity follows the same controller pattern:
+
+```php
+// Example from [app/Http/Controllers/ClientController.php](mdc:app/Http/Controllers/ClientController.php)
+class ClientController extends Controller
+{
+    public function index(Request $request)
+    {
+        $this->authorize('viewAny', Client::class);
+
+        $clients = Client::query()
+            ->with(['commercial', 'ville.secteur'])
+            ->when($request->search, function ($query, $search) {
+                $query->where('fullname', 'like', "%{$search}%");
+            })
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('client/index', [
+            'clients' => $clients,
+            'filters' => $request->only(['search', 'sort']),
+        ]);
+    }
+
+    public function store(ClientRequest $request)
+    {
+        $this->authorize('create', Client::class);
+
+        Client::create($request->validated());
+
+        return redirect()->route('clients.index')
+            ->with('success', 'Client créé avec succès.');
+    }
+}
+```
+
+### Form Request Validation
+Each entity has a dedicated FormRequest:
+
+```php
+// Example from [app/Http/Requests/ClientRequest.php](mdc:app/Http/Requests/ClientRequest.php)
+class ClientRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'fullname' => ['required', 'string', 'max:255', 'unique:clients,fullname,' . $this->client?->id],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:20'],
+            'commercial_id' => ['required', 'exists:commerciaux,id'],
+            'ville_id' => ['required', 'exists:villes,id'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'fullname.required' => 'Le nom complet est requis.',
+            'email.required' => 'L\'email est requis.',
+            'phone.required' => 'Le téléphone est requis.',
+        ];
+    }
+}
+```
+
+## Model Patterns
+
+### Eloquent Relationships
+Consistent relationship patterns across all models:
+
+```php
+// Example from [app/Models/Client.php](mdc:app/Models/Client.php)
+class Client extends Model
+{
+    protected $fillable = [
+        'fullname',
+        'email',
+        'phone',
+        'commercial_id',
+        'ville_id',
+    ];
+
+    public function commercial(): BelongsTo
+    {
+        return $this->belongsTo(Commercial::class);
+    }
+
+    public function ville(): BelongsTo
+    {
+        return $this->belongsTo(Ville::class);
+    }
+}
+```
+
+### Product Model Special Patterns
+Products have additional complexity with brands and categories:
+
+```php
+// Example from [app/Models/Product.php](mdc:app/Models/Product.php)
+class Product extends Model
+{
+    protected $fillable = [
+        'libelle',
+        'description',
+        'prix_unite',
+        'nombre_unite_par_colis',
+        'brand_id',
+        'category_id',
+    ];
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+}
+```
+
+## Frontend Page Patterns
+
+### Index Page Structure
+Each entity follows the same page structure:
+
+```typescript
+// Example from [resources/js/pages/client/index.tsx](mdc:resources/js/pages/client/index.tsx)
+interface ClientIndexProps {
+  clients: PaginatedData<Client>;
+  filters: Record<string, any>;
+}
+
+function ClientIndex({ clients, filters }: ClientIndexProps) {
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-semibold">Clients</h1>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            Ajouter un client
+          </Button>
+        </div>
+
+        <AppTable data={clients.data} links={clients.links} />
+
+        <ClientDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+### Table Component Pattern
+Consistent table structure across all entities:
+
+```typescript
+// Example from [resources/js/pages/client/AppTable.tsx](mdc:resources/js/pages/client/AppTable.tsx)
+interface AppTableProps {
+  data: Client[];
+  links: PaginationLinks;
+}
+
+function AppTable({ data, links }: AppTableProps) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nom</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Téléphone</TableHead>
+              <TableHead>Commercial</TableHead>
+              <TableHead>Ville</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((client) => (
+              <ClientTableRow key={client.id} client={client} />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Pagination links={links} />
+    </div>
+  );
+}
+```
+
+### Dialog Component Pattern
+Consistent dialog structure for create/edit operations:
+
+```typescript
+// Example from [resources/js/pages/client/components/ClientDialog.tsx](mdc:resources/js/pages/client/components/ClientDialog.tsx)
+interface ClientDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  client?: Client;
+}
+
+function ClientDialog({ open, onOpenChange, client }: ClientDialogProps) {
+  const form = useForm({
+    fullname: client?.fullname ?? '',
+    email: client?.email ?? '',
+    phone: client?.phone ?? '',
+    commercial_id: client?.commercial_id ?? '',
+    ville_id: client?.ville_id ?? '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (client) {
+      form.put(route('clients.update', client.id));
+    } else {
+      form.post(route('clients.store'));
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {client ? 'Modifier le client' : 'Ajouter un client'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form fields */}
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={form.processing}>
+              {form.processing ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+## Permission Patterns
+
+### Permission Naming Convention
+Consistent permission naming across all entities:
+
+```php
+// Permission names follow pattern: [entity].[action]
+'client.create'
+'client.view'
+'client.update'
+'client.delete'
+
+'product.create'
+'product.view'
+'product.update'
+'product.delete'
+```
+
+### Controller Authorization
+Consistent authorization in controllers:
+
+```php
+public function index(Request $request)
+{
+    $this->authorize('viewAny', Client::class);
+    // ... implementation
+}
+
+public function store(ClientRequest $request)
+{
+    $this->authorize('create', Client::class);
+    // ... implementation
+}
+
+public function update(ClientRequest $request, Client $client)
+{
+    $this->authorize('update', $client);
+    // ... implementation
+}
+
+public function destroy(Client $client)
+{
+    $this->authorize('delete', $client);
+    // ... implementation
+}
+```
+
+### Frontend Permission Checks
+Use `usePermissions()` hook for UI visibility:
+
+```typescript
+// Example from [resources/js/hooks/use-permissions.tsx](mdc:resources/js/hooks/use-permissions.tsx)
+function usePermissions() {
+  const { props } = usePage();
+  return props.permissions as string[];
+}
+
+function Component() {
+  const permissions = usePermissions();
+
+  return (
+    <div>
+      {permissions.includes('client.create') && (
+        <Button>Ajouter un client</Button>
+      )}
+    </div>
+  );
+}
+```
+
+## Search and Filter Patterns
+
+### Backend Search Implementation
+Consistent search across all entities:
+
+```php
+public function index(Request $request)
+{
+    $query = Client::query()
+        ->with(['commercial', 'ville.secteur']);
+
+    // Search functionality
+    if ($request->search) {
+        $query->where('fullname', 'like', "%{$request->search}%")
+              ->orWhere('email', 'like', "%{$request->search}%");
+    }
+
+    // Sorting
+    $query->orderBy($request->sort ?? 'created_at', $request->direction ?? 'desc');
+
+    $clients = $query->paginate(10)->withQueryString();
+
+    return Inertia::render('client/index', [
+        'clients' => $clients,
+        'filters' => $request->only(['search', 'sort', 'direction']),
+    ]);
+}
+```
+
+### Frontend Search Implementation
+Consistent search UI across all entities:
+
+```typescript
+function SearchBar({ filters }: { filters: Record<string, any> }) {
+  const { get } = router;
+
+  const handleSearch = (search: string) => {
+    get(route('clients.index'), { search }, {
+      preserveState: true,
+      replace: true,
+    });
+  };
+
+  return (
+    <div className="flex items-center space-x-2">
+      <Input
+        placeholder="Rechercher..."
+        defaultValue={filters.search}
+        onChange={(e) => handleSearch(e.target.value)}
+      />
+    </div>
+  );
+}
+```
+
+## Print/Export Patterns
+
+### Print Functionality
+Special print patterns for client lists:
+
+```typescript
+// Example from [resources/js/pages/client/components/print/index.ts](mdc:resources/js/pages/client/components/print/index.ts)
+export function printClientList(clients: Client[], commercial?: Commercial) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Liste des clients</title>
+        <style>
+          /* Print styles */
+        </style>
+      </head>
+      <body>
+        <h1>Liste des clients${commercial ? ` - ${commercial.nom}` : ''}</h1>
+        <table>
+          <!-- Client data -->
+        </table>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+  printWindow.print();
+}
+```
+---
+description: Entity management patterns for products, clients, commercials, and related entities
+---

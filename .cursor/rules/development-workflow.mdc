@@ -1,0 +1,362 @@
+# Development Workflow & Best Practices
+
+## Development Environment Setup
+
+### Prerequisites
+```bash
+# Required software versions
+PHP 8.2+
+Composer 2.x
+Node.js 18+
+npm 8+
+MySQL 8.0+
+```
+
+### Local Development Commands
+```bash
+# Backend setup
+composer install
+php artisan migrate:fresh --seed
+php artisan key:generate
+php artisan serve
+
+# Frontend setup
+npm install
+npm run dev
+
+# Testing
+php artisan test
+npm run test
+```
+
+## File Organization Standards
+
+### Backend Structure
+Follow the established patterns in [app/](mdc:app/):
+
+- **Controllers**: [app/Http/Controllers/](mdc:app/Http/Controllers/) - Route handlers
+- **Models**: [app/Models/](mdc:app/Models/) - Eloquent models with relationships
+- **Requests**: [app/Http/Requests/](mdc:app/Http/Requests/) - Form validation
+- **Migrations**: [database/migrations/](mdc:database/migrations/) - Schema changes
+- **Seeders**: [database/seeders/](mdc:database/seeders/) - Test data
+- **Factories**: [database/factories/](mdc:database/factories/) - Model factories
+
+### Frontend Structure
+Follow the established patterns in [resources/js/](mdc:resources/js/):
+
+- **Pages**: [resources/js/pages/](mdc:resources/js/pages/) - Route components
+- **Components**: [resources/js/components/](mdc:resources/js/components/) - Shared components
+- **Layouts**: [resources/js/layouts/](mdc:resources/js/layouts/) - Page layouts
+- **Hooks**: [resources/js/hooks/](mdc:resources/js/hooks/) - Custom React hooks
+- **Types**: [resources/js/types/](mdc:resources/js/types/) - TypeScript definitions
+
+## Code Standards
+
+### PHP Standards
+- Use `declare(strict_types=1)` in all PHP files
+- Follow PSR-12 code formatting
+- Use PHP 8.2+ features (enums, readonly, match, etc.)
+- Never use default parameter values - make all parameters explicit
+- Implement proper error handling with try-catch blocks
+
+### TypeScript Standards
+- Use TypeScript for all code
+- Prefer interfaces over types
+- Avoid `any` or `unknown` types
+- No type assertions with `as` or `!`
+- Avoid enums - use objects or maps
+- Organize types in dedicated `types/` directory
+
+### React Standards
+- Use functional components only (no classes)
+- Prefer declarative programming patterns
+- Use descriptive variable names with auxiliary verbs (`isLoaded`, `hasError`)
+- Keep JSX minimal and readable
+- Use the "function" keyword for pure functions
+
+## Testing Strategy
+
+### Backend Testing
+Tests are located in [tests/](mdc:tests/):
+
+```php
+// Example from [tests/Feature/ClientPermissionTest.php](mdc:tests/Feature/ClientPermissionTest.php)
+class ClientPermissionTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_user_without_permission_cannot_view_clients(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->get(route('clients.index'));
+
+        $response->assertForbidden();
+    }
+
+    public function test_user_with_permission_can_view_clients(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('client.view');
+
+        $response = $this->actingAs($user)
+            ->get(route('clients.index'));
+
+        $response->assertOk();
+    }
+}
+```
+
+### Frontend Testing
+```typescript
+// Component testing example
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+test('submits form correctly', async () => {
+  const user = userEvent.setup();
+  render(<ClientDialog />);
+
+  await user.type(screen.getByLabelText('Nom'), 'John Doe');
+  await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+  // Assert form submission
+});
+```
+
+## Database Management
+
+### Migration Patterns
+Follow the established patterns in [database/migrations/](mdc:database/migrations/):
+
+```php
+// Example migration pattern
+public function up(): void
+{
+    Schema::create('clients', function (Blueprint $table) {
+        $table->id();
+        $table->string('fullname')->unique();
+        $table->string('email');
+        $table->string('phone');
+        $table->foreignId('commercial_id')->constrained('commerciaux')->cascadeOnDelete();
+        $table->foreignId('ville_id')->constrained('villes')->cascadeOnDelete();
+        $table->timestamps();
+    });
+}
+```
+
+### Seeder Patterns
+Follow the established patterns in [database/seeders/](mdc:database/seeders/):
+
+```php
+// Example from [database/seeders/ClientSeeder.php](mdc:database/seeders/ClientSeeder.php)
+class ClientSeeder extends Seeder
+{
+    public function run(): void
+    {
+        Client::factory(50)->create();
+    }
+}
+```
+
+### Factory Patterns
+Follow the established patterns in [database/factories/](mdc:database/factories/):
+
+```php
+// Example from [database/factories/ClientFactory.php](mdc:database/factories/ClientFactory.php)
+class ClientFactory extends Factory
+{
+    public function definition(): array
+    {
+        return [
+            'fullname' => fake()->name(),
+            'email' => fake()->unique()->safeEmail(),
+            'phone' => fake()->phoneNumber(),
+            'commercial_id' => Commercial::factory(),
+            'ville_id' => Ville::factory(),
+        ];
+    }
+}
+```
+
+## Error Handling
+
+### Backend Error Handling
+```php
+// Controller error handling pattern
+public function store(ClientRequest $request)
+{
+    try {
+        $this->authorize('create', Client::class);
+
+        Client::create($request->validated());
+
+        return redirect()->route('clients.index')
+            ->with('success', 'Client créé avec succès.');
+    } catch (Exception $e) {
+        Log::error('Failed to create client', [
+            'error' => $e->getMessage(),
+            'data' => $request->validated(),
+        ]);
+
+        return back()->withErrors(['error' => 'Erreur lors de la création du client.']);
+    }
+}
+```
+
+### Frontend Error Handling
+```typescript
+// Error boundary pattern
+function ErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return (
+      <div className="p-4 text-center">
+        <h2 className="text-lg font-semibold text-red-600">
+          Une erreur s'est produite
+        </h2>
+        <Button onClick={() => window.location.reload()}>
+          Recharger la page
+        </Button>
+      </div>
+    );
+  }
+
+  return children;
+}
+```
+
+## Performance Optimization
+
+### Backend Optimization
+```php
+// Eager loading to prevent N+1 queries
+$clients = Client::query()
+    ->with(['commercial', 'ville.secteur'])
+    ->paginate(10);
+
+// Database indexing
+Schema::table('clients', function (Blueprint $table) {
+    $table->index(['fullname', 'email']);
+});
+```
+
+### Frontend Optimization
+```typescript
+// Code splitting
+const ClientDialog = lazy(() => import('./ClientDialog'));
+
+// Memoization for expensive computations
+const filteredClients = useMemo(() => {
+  return clients.filter(client =>
+    client.fullname.toLowerCase().includes(search.toLowerCase())
+  );
+}, [clients, search]);
+```
+
+## Security Best Practices
+
+### Input Validation
+```php
+// FormRequest validation
+class ClientRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        return [
+            'fullname' => ['required', 'string', 'max:255', 'unique:clients,fullname,' . $this->client?->id],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:20'],
+            'commercial_id' => ['required', 'exists:commerciaux,id'],
+            'ville_id' => ['required', 'exists:villes,id'],
+        ];
+    }
+}
+```
+
+### Authorization
+```php
+// Controller authorization
+public function update(ClientRequest $request, Client $client)
+{
+    $this->authorize('update', $client);
+    // ... implementation
+}
+
+// Policy authorization
+public function update(User $user, Client $client): bool
+{
+    return $user->hasPermissionTo('client.update');
+}
+```
+
+## Deployment Workflow
+
+### Production Build
+```bash
+# Optimize for production
+composer install --no-dev --optimize-autoloader
+npm run build
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+### Environment Configuration
+- **Development**: `.env.local` with debug enabled
+- **Testing**: `.env.testing` with test database
+- **Production**: `.env` with optimizations enabled
+
+### Database Deployment
+```bash
+# Run migrations
+php artisan migrate --force
+
+# Seed production data if needed
+php artisan db:seed --class=ProductionSeeder
+```
+
+## Debugging Tools
+
+### Development Tools
+- **Laravel Telescope**: Request/query debugging
+- **React DevTools**: Component inspection
+- **Inertia DevTools**: Page prop debugging
+- **Laravel Debugbar**: Performance profiling
+
+### Error Monitoring
+```php
+// Logging with context
+Log::error('Client creation failed', [
+    'user_id' => auth()->id(),
+    'data' => $request->validated(),
+    'error' => $e->getMessage(),
+]);
+```
+
+## Code Review Checklist
+
+### Backend Review
+- [ ] PSR-12 code formatting
+- [ ] Proper error handling
+- [ ] Authorization checks
+- [ ] Input validation
+- [ ] Database relationships
+- [ ] Test coverage
+
+### Frontend Review
+- [ ] TypeScript types
+- [ ] Component structure
+- [ ] Form validation
+- [ ] Error handling
+- [ ] Performance considerations
+- [ ] Accessibility compliance
+
+### Security Review
+- [ ] Input sanitization
+- [ ] Authorization checks
+- [ ] CSRF protection
+- [ ] SQL injection prevention
+- [ ] XSS protection
