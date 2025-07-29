@@ -27,10 +27,12 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             ProductSeeder::class,
             TransporteurSeeder::class,
+            AssignSortiePermissionsSeeder::class,
+            SortieSeeder::class,
         ]);
 
         // 2. Maintenant créer le rôle Super Admin avec TOUTES les permissions
-        $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin']);
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
 
         // 3. Assigner toutes les permissions au rôle Super Admin
         $allPermissions = Permission::all();

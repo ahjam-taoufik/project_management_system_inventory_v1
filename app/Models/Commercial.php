@@ -24,4 +24,12 @@ class Commercial extends Model
     {
         return $this->hasMany(Client::class, 'idCommercial');
     }
+
+    /**
+     * Get the sorties for the commercial.
+     */
+    public function sorties(): HasMany
+    {
+        return $this->hasMany(Sortie::class);
+    }
 }

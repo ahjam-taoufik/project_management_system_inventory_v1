@@ -3,7 +3,7 @@ import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
 import { type MainNavItem, NavItem } from '@/types';
-import {  LayoutGrid, LayoutPanelTop, MapPinCheckInside, Notebook, UserRoundPlus, Users, Users2, FolderTree, Package, Package2, Truck, Gift, ArrowDownToLine, Move, Warehouse } from 'lucide-react';
+import {  LayoutGrid, LayoutPanelTop, MapPinCheckInside, Notebook, UserRoundPlus, Users, Users2, FolderTree, Package, Package2, Truck, Gift, ArrowDownToLine, ArrowUpFromLine, Move, Warehouse } from 'lucide-react';
 import AppLogo from './app-logo';
 import { NavMainSimple } from '@/components/nav-main2';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -28,7 +28,7 @@ export function AppSidebar() {
 
     // Navigation avec sous-éléments et permissions
     const mainNavItems: MainNavItem[] = [
-        ...(hasPermission('entrers.view') || hasPermission('products.view') ? [{
+        ...(hasPermission('entrers.view') || hasPermission('sorties.view') || hasPermission('products.view') ? [{
             title: 'Mouvements',
             icon: Move,
             subItems: [
@@ -36,6 +36,11 @@ export function AppSidebar() {
                     title: 'Entrées',
                     href: '/entrers',
                     icon: ArrowDownToLine,
+                }] : []),
+                ...(hasPermission('sorties.view') ? [{
+                    title: 'Sorties',
+                    href: '/sorties',
+                    icon: ArrowUpFromLine,
                 }] : []),
                 ...(hasPermission('products.view') ? [{
                     title: 'Stock',

@@ -37,6 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('livreurs', LivreurController::class);
     Route::resource('transporteurs', TransporteurController::class);
     Route::resource('entrers', EntrerController::class);
+    Route::resource('sorties', App\Http\Controllers\SortieController::class);
     Route::get('stocks', [App\Http\Controllers\StockController::class, 'index'])->name('stocks.index');
 
     Route::resource('users', UserController::class);
@@ -45,9 +46,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/secteurs-by-ville', [ClientController::class, 'getSecteursByVille'])->name('api.secteurs-by-ville');
     Route::get('/api/products', [ProductController::class, 'getProducts'])->name('api.products');
     Route::get('/api/product-details/{productId}', [EntrerController::class, 'getProductDetails'])->name('api.product-details');
-Route::get('/api/check-bl-exists/{numeroBl}', [EntrerController::class, 'checkBlExists'])->name('api.check-bl-exists');
+    Route::get('/api/check-bl-exists/{numeroBl}', [EntrerController::class, 'checkBlExists'])->name('api.check-bl-exists');
     Route::get('/api/bl-details/{numeroBl}', [EntrerController::class, 'getBlDetails'])->name('api.bl-details');
     Route::get('/promotion-for-product/{ref_produit}', [PromotionController::class, 'getPromotionForProduct'])->name('promotion-for-product');
+    
+    // API routes for Sorties
+    Route::get('/api/sortie-product-details/{productId}', [App\Http\Controllers\SortieController::class, 'getProductDetails'])->name('api.sortie-product-details');
+    Route::get('/api/check-sortie-bl-exists/{numeroBl}', [App\Http\Controllers\SortieController::class, 'checkBlExists'])->name('api.check-sortie-bl-exists');
+    Route::get('/api/clients-by-commercial/{commercialId}', [App\Http\Controllers\SortieController::class, 'getClientsByCommercial'])->name('api.clients-by-commercial');
 });
 
 require __DIR__.'/settings.php';
